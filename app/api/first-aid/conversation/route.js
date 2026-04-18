@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { jsonError, jsonOk } from "@/lib/api/json";
 import dbConnect from "@/lib/db";
 import FirstAidConversation from "@/lib/models/FirstAidConversation";
 
@@ -32,7 +32,7 @@ export async function GET(request) {
       })
         .select("messages")
         .lean();
-      return NextResponse.json({
+      return jsonOk({
         ok: true,
         messages: doc?.messages?.map((m) => ({ role: m.role, text: m.text })) ?? [],
       });
@@ -40,20 +40,20 @@ export async function GET(request) {
 
     const anon = request.headers.get("x-first-aid-session")?.trim();
     if (!anon || anon.length > 80) {
-      return NextResponse.json({ ok: true, messages: [] });
+      return jsonOk({ ok: true, messages: [] });
     }
 
     const doc = await FirstAidConversation.findOne({ anonymousId: anon })
       .select("messages")
       .lean();
 
-    return NextResponse.json({
+    return jsonOk({
       ok: true,
       messages: doc?.messages?.map((m) => ({ role: m.role, text: m.text })) ?? [],
     });
   } catch (err) {
     console.error("[GET /api/first-aid/conversation]", err);
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+    return jsonError(500, { ok: false, error: "server_error" });
   }
 }
 
@@ -71,7 +71,7 @@ export async function PUT(request) {
         { $set: { userId: session.user.id, messages } },
         { upsert: true, new: true },
       );
-      return NextResponse.json({ ok: true });
+      return jsonOk({ ok: true });
     }
 
     const headerAnon = request.headers.get("x-first-aid-session")?.trim();
@@ -79,11 +79,11 @@ export async function PUT(request) {
       typeof body.anonymousId === "string" ? body.anonymousId.trim() : "";
     const anonymousId = headerAnon || bodyAnon;
     if (!anonymousId || anonymousId.length > 80) {
-      return NextResponse.json({ ok: false, error: "missing_anonymous_id" }, { status: 400 });
+      return jsonError(400, { ok: false, error: "missing_anonymous_id" });
     }
 
     if (headerAnon && bodyAnon && headerAnon !== bodyAnon) {
-      return NextResponse.json({ ok: false, error: "id_mismatch" }, { status: 400 });
+      return jsonError(400, { ok: false, error: "id_mismatch" });
     }
 
     await FirstAidConversation.findOneAndUpdate(
@@ -92,9 +92,9 @@ export async function PUT(request) {
       { upsert: true, new: true },
     );
 
-    return NextResponse.json({ ok: true });
+    return jsonOk({ ok: true });
   } catch (err) {
     console.error("[PUT /api/first-aid/conversation]", err);
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+    return jsonError(500, { ok: false, error: "server_error" });
   }
 }

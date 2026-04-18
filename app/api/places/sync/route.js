@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
+import { jsonError, jsonOk } from "@/lib/api/json";
 import { syncFromOverpass } from "@/lib/overpass";
 
 export async function POST(request) {
@@ -10,12 +10,12 @@ export async function POST(request) {
     await dbConnect();
     const result = await syncFromOverpass(bbox);
     
-    return NextResponse.json({ ok: true, ...result });
+    return jsonOk({ ok: true, ...result });
   } catch (err) {
     console.error("[POST /api/places/sync]", err.message);
-    return NextResponse.json(
-      { ok: false, error: "Overpass sync failed: " + err.message },
-      { status: 502 }
-    );
+    return jsonError(502, {
+      ok: false,
+      error: "Overpass sync failed: " + err.message,
+    });
   }
 }

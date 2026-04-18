@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
+import { jsonError, jsonOk } from "@/lib/api/json";
 import Place from "@/lib/models/Place";
 import { syncFromOverpass, isCacheStale } from "@/lib/overpass";
 
@@ -33,13 +33,13 @@ export async function GET(request) {
       .sort({ name: 1 })
       .lean();
 
-    return NextResponse.json({
+    return jsonOk({
       ok: true,
       count: places.length,
       places,
     });
   } catch (err) {
     console.error("[GET /api/places]", err.message);
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    return jsonError(500, { ok: false, error: err.message });
   }
 }

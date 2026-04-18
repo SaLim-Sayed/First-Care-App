@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
+import { jsonError, jsonOk } from "@/lib/api/json";
 import Place from "@/lib/models/Place";
 
 export async function GET() {
@@ -17,7 +17,7 @@ export async function GET() {
 
     const categories = Object.fromEntries(byCategory.map((b) => [b._id, b.count]));
 
-    return NextResponse.json({
+    return jsonOk({
       ok: true,
       total,
       categories,
@@ -25,6 +25,6 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[GET /api/places/stats]", err.message);
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    return jsonError(500, { ok: false, error: err.message });
   }
 }

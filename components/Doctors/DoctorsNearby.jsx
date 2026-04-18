@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   FaHospital,
@@ -22,13 +21,12 @@ import { Input } from "@heroui/react";
 
 import {
   FILTERS,
-  MINIA_CENTER,
-  PIN,
   catLabel,
   catColor,
   catBarGrad,
   catEmoji,
 } from "./constants";
+import { useLeafletPlacesMap } from "./useLeafletPlacesMap";
 import { useDoctors } from "./useDoctors";
 import { PlaceDrawer } from "./PlaceDrawer";
 
@@ -48,67 +46,15 @@ export default function DoctorsNearby() {
   const [showMap, setShowMap] = useState(true);
   const [drawer, setDrawer] = useState(null);
 
-  // ── Refs ───────────────────────────────────────────────────────────────────
-  const mapRef = useRef(null); // Leaflet map instance
-  const mapDivRef = useRef(null); // DOM node
-  const markersRef = useRef({}); // id → Leaflet marker
   const cardRefs = useRef({});
 
-  // ── Init Leaflet (after loading finishes so div is mounted) ────────────────
-  useEffect(() => {
-    if (loading || error || !mapDivRef.current || mapRef.current) return;
-    const map = L.map(mapDivRef.current, { center: MINIA_CENTER, zoom: 12 });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
-    mapRef.current = map;
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, [loading, error]);
-
-  // ── Invalidate map size on show/hide toggle ────────────────────────────────
-  useEffect(() => {
-    if (showMap && mapRef.current)
-      setTimeout(() => mapRef.current?.invalidateSize(), 150);
-  }, [showMap]);
-
-  // ── Sync markers to filtered list ─────────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const ids = new Set(filtered.map((p) => p.id));
-    Object.entries(markersRef.current).forEach(([id, m]) => {
-      if (!ids.has(Number(id))) {
-        m.remove();
-        delete markersRef.current[id];
-      }
-    });
-
-    filtered.forEach((place) => {
-      if (markersRef.current[place.id]) return;
-      const icon = PIN[place.category] || PIN.default;
-      const label = isAr ? place.name : place.nameEn;
-      const popup = `
-        <div style="min-width:170px;font-family:sans-serif;direction:${isAr ? "rtl" : "ltr"}">
-          <strong style="font-size:13px">${label}</strong><br/>
-          <span style="font-size:11px;color:#555">${place.address}</span>
-          ${place.phone ? `<br/><a href="tel:${place.phone}" style="font-size:11px">📞 ${place.phone}</a>` : ""}
-          <br/>
-          <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}"
-             target="_blank"
-             style="display:inline-block;margin-top:6px;padding:4px 10px;background:#2563eb;color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">
-            ${isAr ? "الاتجاهات" : "Directions"}
-          </a>
-        </div>`;
-      markersRef.current[place.id] = L.marker([place.lat, place.lon], { icon })
-        .bindPopup(popup)
-        .addTo(map);
-    });
-  }, [filtered, isAr]);
+  const { mapRef, mapDivRef, markersRef } = useLeafletPlacesMap({
+    loading,
+    error,
+    filtered,
+    isAr,
+    showMap,
+  });
 
   // ── Filter + search ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -229,11 +175,7 @@ export default function DoctorsNearby() {
           {/* Search */}
           <div className="relative flex items-center flex-1">
             <Input
-              endContent={
-                <FaSearch
-                  className={`text-gray-900 ${isAr ? "right-4" : "left-4"}`}
-                />
-              }
+            
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

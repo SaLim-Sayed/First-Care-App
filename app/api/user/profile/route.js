@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { jsonError, jsonOk } from "@/lib/api/json";
 import dbConnect from "@/lib/db";
 import User from "@/lib/models/User";
 
@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+      return jsonError(401, { ok: false, error: "unauthorized" });
     }
 
     await dbConnect();
@@ -18,10 +18,10 @@ export async function GET() {
       .lean();
 
     if (!user) {
-      return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+      return jsonError(404, { ok: false, error: "not_found" });
     }
 
-    return NextResponse.json({
+    return jsonOk({
       ok: true,
       profile: {
         email: user.email,
@@ -32,7 +32,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[GET /api/user/profile]", err);
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+    return jsonError(500, { ok: false, error: "server_error" });
   }
 }
 
@@ -40,7 +40,7 @@ export async function PATCH(request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+      return jsonError(401, { ok: false, error: "unauthorized" });
     }
 
     const body = await request.json();
@@ -50,9 +50,9 @@ export async function PATCH(request) {
     await dbConnect();
     await User.updateOne({ _id: session.user.id }, { $set: { name } });
 
-    return NextResponse.json({ ok: true, name });
+    return jsonOk({ ok: true, name });
   } catch (err) {
     console.error("[PATCH /api/user/profile]", err);
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+    return jsonError(500, { ok: false, error: "server_error" });
   }
 }

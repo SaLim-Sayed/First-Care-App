@@ -1,15 +1,19 @@
 'use client';
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 
+import { fetchUserProfile, patchUserProfile } from '@/lib/api/userProfile';
+
 export default function ProfilePage() {
   const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const lng = params.lng || 'en';
   const isAr = lng === 'ar';
 
@@ -18,72 +22,67 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [emailReadonly, setEmailReadonly] = useState('');
   const [memberSince, setMemberSince] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isError: profileError,
+  } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: fetchUserProfile,
+    enabled: status === 'authenticated',
+  });
+
+  useEffect(() => {
+    if (!profile && profileError && session?.user) {
+      setName(session.user.name ?? '');
+      setEmailReadonly(session.user.email ?? '');
+      setMemberSince(null);
+      return;
+    }
+    if (!profile) return;
+    setName(profile.name ?? '');
+    setEmailReadonly(profile.email ?? session?.user?.email ?? '');
+    setMemberSince(profile.createdAt ?? null);
+  }, [profile, profileError, session?.user]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace(`/${lng}/sign-in`);
-      return;
     }
-    if (status !== 'authenticated') return;
+  }, [status, lng, router]);
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/user/profile');
-        const data = await res.json();
-        if (cancelled) return;
-        if (!res.ok) throw new Error(data?.error || 'fail');
-        setName(data.profile?.name ?? '');
-        setEmailReadonly(data.profile?.email ?? session?.user?.email ?? '');
-        setMemberSince(data.profile?.createdAt ?? null);
-      } catch {
-        if (!cancelled) {
-          setName(session?.user?.name ?? '');
-          setEmailReadonly(session?.user?.email ?? '');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [status, lng, router, session?.user?.email, session?.user?.name]);
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    setError('');
-    setMessage('');
-    setSaving(true);
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'fail');
-
+  const saveMutation = useMutation({
+    mutationFn: (nextName) => patchUserProfile(nextName),
+    onSuccess: async (data) => {
       await update({
         user: {
           name: data.name ?? name,
           email: session?.user?.email,
         },
       });
+      await queryClient.invalidateQueries({ queryKey: ['user-profile'] });
       setMessage(t('profile.saved'));
-    } catch {
+      setError('');
+    },
+    onError: () => {
       setError(t('auth.error_generic'));
-    } finally {
-      setSaving(false);
-    }
+      setMessage('');
+    },
+  });
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    saveMutation.mutate(name);
   }
 
-  if (status === 'loading' || loading) {
+  const loading = status === 'loading' || (status === 'authenticated' && profileLoading);
+
+  if (loading) {
     return (
       <div className="container mx-auto px-4 pt-32 pb-20 text-center text-[var(--text-muted)]">
         …
@@ -100,6 +99,8 @@ export default function ProfilePage() {
       month: 'long',
       day: 'numeric',
     });
+
+  const saving = saveMutation.isPending;
 
   return (
     <div
