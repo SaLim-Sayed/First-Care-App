@@ -59,7 +59,7 @@ export default function Slides() {
             {slidesData.map((slide, index) => (
               <SwiperSlide key={index}>
                 <div className="px-4 py-8">
-                  <div className="bg-[var(--card-bg)] rounded-[3rem] p-10 lg:p-16 flex flex-col lg:flex-row items-center gap-12 max-w-6xl mx-auto relative overflow-hidden transition-all duration-300 shadow-[var(--card-shadow)] border border-[var(--border-color)]">
+                  <div className="  rounded-[3rem] p-10 lg:p-16 flex flex-col lg:flex-row items-center gap-12 max-w-6xl mx-auto relative overflow-hidden transition-all duration-300   ">
                     
                     {/* Background Glow */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
