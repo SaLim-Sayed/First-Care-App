@@ -1,40 +1,152 @@
 'use client';
 import axios from "axios";
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useTranslation } from 'react-i18next';
 import Footer from '@/components/Footer';
 
-// Icons
 import { IoSend } from "react-icons/io5";
-import { 
-    MdLocalHospital, 
-    MdHealthAndSafety, 
-    MdLightbulb, 
-    MdWarning,
-    MdMedicalServices,
-    MdPhone
-} from "react-icons/md";
-import { FaUserMd, FaNotesMedical, FaRobot } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import { MdHealthAndSafety } from "react-icons/md";
+
+const ANON_STORAGE_KEY = 'fc_firstaid_session';
+
+function getOrCreateAnonymousId() {
+    if (typeof window === 'undefined') return '';
+    try {
+        let id = localStorage.getItem(ANON_STORAGE_KEY);
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem(ANON_STORAGE_KEY, id);
+        }
+        return id;
+    } catch {
+        return '';
+    }
+}
 
 export default function FirstAid() {
     const [value, setValue] = useState("");
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [hydrated, setHydrated] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(true);
     const { t, i18n } = useTranslation();
+    const { status } = useSession();
     const chatEndRef = useRef(null);
-    const isAr = i18n.language === 'ar';
+    const persistTimerRef = useRef(null);
+    const anonymousIdRef = useRef('');
+    const isAr = i18n.language?.startsWith('ar');
 
+    const persistConversation = useCallback(async (msgs) => {
+        if (!hydrated || !msgs.length) return;
+        try {
+            const anon = anonymousIdRef.current;
+            const headers = { 'Content-Type': 'application/json' };
+            if (anon) headers['x-first-aid-session'] = anon;
+            await fetch('/api/first-aid/conversation', {
+                method: 'PUT',
+                credentials: 'include',
+                headers,
+                body: JSON.stringify({
+                    messages: msgs.map((m) => ({ role: m.role, text: m.text })),
+                    anonymousId: anon || undefined,
+                }),
+            });
+        } catch (e) {
+            console.warn('[FirstAid] persist failed', e);
+        }
+    }, [hydrated]);
 
-    // Initial greeting
+    // Initial load: MongoDB conversation or default welcome
     useEffect(() => {
-        setMessages([
-            {
-                role: 'assistant',
-                text: t('firstaid.welcome_message', isAr ? 'مرحبا! أنا هنا لمساعدتك في تعليمات الإسعافات الأولية. يرجى وصف الحالة.' : 'Hi! I am here to help you with First Aid instructions. Please describe the situation.')
+        let cancelled = false;
+        (async () => {
+            anonymousIdRef.current = getOrCreateAnonymousId();
+            try {
+                const anon = anonymousIdRef.current;
+                const headers = {};
+                if (anon) headers['x-first-aid-session'] = anon;
+                const res = await fetch('/api/first-aid/conversation', {
+                    credentials: 'include',
+                    headers,
+                });
+                const data = await res.json();
+                if (cancelled) return;
+                if (Array.isArray(data.messages) && data.messages.length > 0) {
+                    setMessages(
+                        data.messages.map((m) => ({
+                            role: m.role,
+                            text: m.text,
+                        })),
+                    );
+                } else {
+                    setMessages([
+                        {
+                            role: 'assistant',
+                            text: t('firstaid.welcome_message'),
+                        },
+                    ]);
+                }
+            } catch (e) {
+                console.warn('[FirstAid] load failed', e);
+                if (!cancelled)
+                    setMessages([
+                        {
+                            role: 'assistant',
+                            text: t('firstaid.welcome_message'),
+                        },
+                    ]);
+            } finally {
+                if (!cancelled) {
+                    setHistoryLoading(false);
+                    setHydrated(true);
+                }
             }
-        ]);
-    }, [i18n.language, isAr, t]);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // When user signs in, prefer server-side user conversation
+    useEffect(() => {
+        if (status !== 'authenticated') return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch('/api/first-aid/conversation', {
+                    credentials: 'include',
+                });
+                const data = await res.json();
+                if (cancelled || !Array.isArray(data.messages)) return;
+                if (data.messages.length > 0) {
+                    setMessages(
+                        data.messages.map((m) => ({
+                            role: m.role,
+                            text: m.text,
+                        })),
+                    );
+                }
+            } catch (e) {
+                console.warn('[FirstAid] reload after login failed', e);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [status]);
+
+    // Debounced persist after messages change
+    useEffect(() => {
+        if (!hydrated || historyLoading) return;
+        if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = setTimeout(() => {
+            persistConversation(messages);
+        }, 500);
+        return () => {
+            if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+        };
+    }, [messages, hydrated, historyLoading, persistConversation]);
 
     // Auto scroll to bottom
     useEffect(() => {
@@ -48,8 +160,8 @@ export default function FirstAid() {
                 setMessages(prev => [...prev, {
                     role: 'assistant',
                     text: isArabic
-                        ? 'عذراً، الخادم المحلي لا يستجيب ولم يتم العثور على مفتاح Gemini (VITE_GEMINI_API_KEY).'
-                        : 'Sorry, the local server is down and no Gemini API key was found (VITE_GEMINI_API_KEY).'
+                        ? 'عذراً، الخادم المحلي لا يستجيب ولم يتم تعيين مفتاح Gemini.'
+                        : 'Sorry, the assistant is unavailable and no Gemini API key is configured.'
                 }]);
                 return;
             }
@@ -76,13 +188,14 @@ export default function FirstAid() {
                 }
             );
 
-            const aiResponse = response.data.candidates[0].content.parts[0].text;
+            const aiResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!aiResponse) throw new Error('empty');
             setMessages(prev => [...prev, { role: 'assistant', text: aiResponse }]);
         } catch (error) {
             console.error("Gemini fallback failed:", error);
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                text: t('firstaid.error', isAr ? 'حدث خطأ في الاتصال بـ Gemini. يرجى المحاولة لاحقاً.' : 'Connection error with Gemini. Please try again later.')
+                text: t('firstaid.error'),
             }]);
         }
     };
@@ -96,7 +209,6 @@ export default function FirstAid() {
         setMessages(prev => [...prev, { role: 'user', text: userText }]);
         setIsLoading(true);
 
-        // Conversational check (Greetings & Thanks)
         const greetings = ['hi', 'hello', 'hey', 'مرحبا', 'اهلا', 'سلام', 'صباح الخير', 'مساء الخير'];
         const thanks = ['thanks', 'thank you', 'thx', 'شكرا', 'تسلم', 'جزاك الله خيرا', 'مشكور'];
 
@@ -142,23 +254,33 @@ export default function FirstAid() {
         }
     }
 
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
-            predictionHandle();
-        }
-    }
-
     return (
         <div className="flex flex-col min-h-screen bg-[var(--bg-color)]   pt-20 transition-colors duration-300" dir={isAr ? 'rtl' : 'ltr'}>
             <div className="flex-grow flex flex-col max-w-2xl mx-auto w-full bg-[var(--card-bg)] shadow-2xl relative overflow-hidden sm:rounded-b-[2.5rem] border-x border-b border-[var(--border-color)]">
 
-                {/* Chat Header */}
-                <div className="bg-gradient-to-r from-[#0076f7] to-[#00c6ff] p-2 relative">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="text-white text-2xl font-black tracking-tight">First Care</h1>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse  "></div>
-                            <span className="text-white/90 text-sm font-medium">We're online!</span>
+                {/* Chat Header — First Care First Aid Bot */}
+                <div className="bg-gradient-to-r from-[#0076f7] to-[#00c6ff] px-4 py-4 relative">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white shadow-lg ring-2 ring-white/30 backdrop-blur-sm"
+                            aria-hidden
+                        >
+                            <MdHealthAndSafety className="text-3xl" />
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                 
+                            <h1 className="text-white text-xl font-black tracking-tight leading-none">
+                            {t('firstaid.bot_role')}
+                            </h1>
+                            <div className="flex items-center gap-2 pt-1">
+                                <span
+                                    className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.95)] animate-pulse"
+                                    aria-hidden
+                                />
+                                <span className="text-white text-sm font-semibold">
+                                    {t('firstaid.status_online')}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     {/* Wavy bottom effect */}
@@ -171,6 +293,10 @@ export default function FirstAid() {
 
                 {/* Messages Area */}
                 <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[var(--bg-color)] transition-all">
+                    {historyLoading ? (
+                        <p className="text-center text-sm text-[var(--text-muted)] py-8">{t('firstaid.loading_history')}</p>
+                    ) : (
+                        <>
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] p-4 rounded-2xl text-[17px] font-medium leading-relaxed shadow-sm
@@ -190,6 +316,8 @@ export default function FirstAid() {
                             </div>
                         </div>
                     )}
+                        </>
+                    )}
                     <div ref={chatEndRef} />
                 </div>
 
@@ -202,12 +330,13 @@ export default function FirstAid() {
                             className="flex-grow p-4 bg-transparent text-lg text-[var(--text-main)] outline-none focus:ring-0 placeholder-[var(--text-muted)] font-medium"
                             value={value}
                             onChange={(e) => setValue(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && predictionHandle()}
+                            onKeyDown={(e) => e.key === 'Enter' && predictionHandle()}
+                            disabled={historyLoading}
                         />
                         <button
-                            className={`w-12 h-12 flex-shrink-0 rounded-full bg-gradient-to-tr from-[#0091ff] to-[#00c6ff] text-white shadow-lg hover:shadow-xl transform active:scale-95 transition-all flex items-center justify-center p-0 ${isLoading || !value.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`w-12 h-12 flex-shrink-0 rounded-full bg-gradient-to-tr from-[#0091ff] to-[#00c6ff] text-white shadow-lg hover:shadow-xl transform active:scale-95 transition-all flex items-center justify-center p-0 ${isLoading || !value.trim() || historyLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={predictionHandle}
-                            disabled={isLoading || !value.trim()}
+                            disabled={isLoading || !value.trim() || historyLoading}
                         >
                             <IoSend size={20} className={isAr ? 'rotate-180 mr-1' : 'ml-1'} />
                         </button>
@@ -219,7 +348,6 @@ export default function FirstAid() {
                     </div>
                 </div>
             </div>
-            <Footer />
-        </div>
+         </div>
     );
 }

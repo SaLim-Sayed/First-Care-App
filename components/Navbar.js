@@ -3,14 +3,16 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { FaBars, FaTimes, FaSun, FaMoon } from "react-icons/fa";
+import { FaBars, FaTimes, FaSun, FaMoon, FaUser } from "react-icons/fa";
 import { TbWorld } from "react-icons/tb";
 import { useTheme } from "@/lib/context/ThemeContext";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { data: session, status: sessionStatus } = useSession();
   const { theme, toggleTheme } = useTheme();
   
   const pathname = usePathname();
@@ -28,6 +30,12 @@ export default function Navbar() {
   const isActive = (path) => {
     return pathname === path || pathname.startsWith(path + '/');
   };
+
+  const profilePath = `/${lng}/profile`;
+  const profileActive = session ? isActive(profilePath) : false;
+  const displayName = session?.user?.name || '';
+  const displayPreview =
+    displayName.slice(0, 11) || session?.user?.email?.slice(0, 10) || '';
 
   const getTabClass = (path) => {
     return `block py-3 lg:py-0 border-b border-gray-100 dark:border-slate-800 lg:border-none no-underline font-semibold transition-all ${isActive(path)
@@ -66,9 +74,42 @@ export default function Navbar() {
               <Link className={getTabClass(`/${lng}/FirstAid`)} href={`/${lng}/FirstAid`}>{t('navbar.first_aid') || 'First Aid'}</Link>
               <Link className={getTabClass(`/${lng}/Doctors`)} href={`/${lng}/Doctors`}>{isAr ? 'أطبــاء' : 'Doctors'}</Link>
               <Link className={getTabClass(`/${lng}/About`)} href={`/${lng}/About`}>{t('navbar.contact_us') || 'Contact Us'}</Link>
+              
             </div>
 
-            <div className={`flex mt-6 lg:mt-0 items-center justify-center lg:justify-start gap-4 ${isAr ? 'lg:mr-auto' : 'lg:ml-auto'}`}>
+            <div className={`flex flex-wrap mt-6 lg:mt-0 items-center justify-center lg:justify-start gap-3 ${isAr ? 'lg:mr-auto' : 'lg:ml-auto'}`}>
+              {sessionStatus === 'loading' ? null : session ? (
+                <Link
+                  href={profilePath}
+                  className="text-sm font-semibold flex items-center gap-2 max-w-[140px] truncate px-1 no-underline transition-all"
+                >
+                  <div
+                    className={`flex items-center justify-center h-full rounded-xl p-2 gap-2 transition-all ${
+                      profileActive
+                        ? 'bg-[#0076f7]/15 dark:bg-[#0076f7]/25   text-[var(--text-active)] scale-105'
+                        : 'bg-blue-50 dark:bg-slate-800 text-[var(--text-main)] hover:text-[#0076f7]'
+                    }`}
+                  >
+                    <FaUser size={14} className={profileActive ? 'text-[#0076f7]' : ''} />
+                    <span
+                      className={`${displayName.length > 11 ? 'text-xs' : 'text-sm'} ${profileActive ? 'font-bold text-[var(--text-active)]' : ''}`}
+                    >
+                      {displayPreview}
+                    </span>
+                  </div>
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href={`/${lng}/sign-in`}
+                    className="text-sm font-bold px-4 py-2 rounded-xl text-[#0076f7] border border-blue-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all no-underline"
+                  >
+                    {t('navbar.sign_in')}
+                  </Link>
+                 
+                </>
+              )}
+
               <button
                 onClick={toggleTheme}
                 className="hidden lg:flex p-3 rounded-xl bg-blue-50 dark:bg-slate-800 text-[#0076f7] hover:bg-blue-100 dark:hover:bg-slate-700 transition-all border border-blue-100 dark:border-slate-700"

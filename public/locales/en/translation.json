@@ -7,10 +7,44 @@
     "english": "English",
     "arabic": "العربية",
     "sign_in": "Sign In",
-    "sign_up": "Sign Up"
+    "sign_up": "Sign Up",
+    "profile": "Profile"
+  },
+  "profile": {
+    "title": "Your profile",
+    "subtitle": "Update how your name appears in the app.",
+    "member_since": "Member since",
+    "save": "Save changes",
+    "saved": "Profile updated.",
+    "back_home": "Back to home"
+  },
+  "auth": {
+    "sign_in_title": "Sign in",
+    "sign_up_title": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "submit_sign_in": "Sign in",
+    "submit_sign_up": "Create account",
+    "sign_out": "Sign out",
+    "guest_ok": "Browse as a guest — sign in anytime.",
+    "error_invalid": "Invalid email or password.",
+    "error_generic": "Something went wrong. Try again.",
+    "error_email_taken": "This email is already registered.",
+    "error_weak_password": "Password must be at least 8 characters.",
+    "success_register": "Account created.",
+    "already_have_account": "Already have an account?",
+    "no_account": "Don't have an account?",
+    "password_hint": "At least 8 characters"
   },
   "firstaid": {
-    "title": "Enter a description of your pain"
+    "title": "Enter a description of your pain",
+    "bot_brand": "First Care",
+    "bot_role": "Your First Aid Bot",
+    "status_online": "We're online!",
+    "welcome_message": "Hi! I'm here to help with first aid instructions. Please describe what happened.",
+    "error": "Couldn't reach the assistant. Please try again.",
+    "loading_history": "Loading your conversation…"
   },
   "about": {
     "contact_info_title": "CONTACT INFO",

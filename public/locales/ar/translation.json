@@ -7,10 +7,44 @@
     "english": "English",
     "arabic": "العربية",
     "sign_in": "تسجيل الدخول",
-    "sign_up": "إنشاء حساب"
+    "sign_up": "إنشاء حساب",
+    "profile": "الملف الشخصي"
+  },
+  "profile": {
+    "title": "ملفك الشخصي",
+    "subtitle": "حدّث الاسم الذي يظهر في التطبيق.",
+    "member_since": "عضو منذ",
+    "save": "حفظ التغييرات",
+    "saved": "تم تحديث الملف الشخصي.",
+    "back_home": "العودة للرئيسية"
+  },
+  "auth": {
+    "sign_in_title": "تسجيل الدخول",
+    "sign_up_title": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "name": "الاسم",
+    "submit_sign_in": "دخول",
+    "submit_sign_up": "إنشاء الحساب",
+    "sign_out": "تسجيل الخروج",
+    "guest_ok": "يمكنك التصفح كزائر — سجّل الدخول في أي وقت.",
+    "error_invalid": "البريد أو كلمة المرور غير صحيحة.",
+    "error_generic": "حدث خطأ. حاول مرة أخرى.",
+    "error_email_taken": "هذا البريد مسجّل مسبقاً.",
+    "error_weak_password": "كلمة المرور يجب أن تكون 8 أحرف على الأقل.",
+    "success_register": "تم إنشاء الحساب.",
+    "already_have_account": "لديك حساب بالفعل؟",
+    "no_account": "ليس لديك حساب؟",
+    "password_hint": "8 أحرف على الأقل"
   },
   "firstaid": {
-    "title": "أدخل وصفاً لشكواك"
+    "title": "أدخل وصفاً لشكواك",
+    "bot_brand": "First Care",
+    "bot_role": "مساعد الإسعافات الأولية",
+    "status_online": "متصلون الآن!",
+    "welcome_message": "مرحباً! أنا هنا لمساعدتك في الإسعافات الأولية. صف الحالة من فضلك.",
+    "error": "تعذر الاتصال بالمساعد. حاول مرة أخرى.",
+    "loading_history": "جاري تحميل المحادثة…"
   },
   "about": {
     "contact_info_title": "معلومات الاتصال",
