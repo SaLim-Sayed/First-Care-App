@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useParams } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 import {
   FaHospital,
@@ -15,6 +16,7 @@ import {
   FaHeartbeat,
   FaSpinner,
   FaExclamationTriangle,
+  FaPlus,
 } from "react-icons/fa";
 import { MdMedicalServices } from "react-icons/md";
 import { Input } from "@heroui/react";
@@ -29,10 +31,14 @@ import {
 import { useLeafletPlacesMap } from "./useLeafletPlacesMap";
 import { useDoctors } from "./useDoctors";
 import { PlaceDrawer } from "./PlaceDrawer";
+import { AddPlaceModal } from "./AddPlaceModal";
+import { placeMatchesSearch } from "./placesMatch";
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function DoctorsNearby() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const params = useParams();
+  const lng = params?.lng || "en";
   const isAr = i18n.language === "ar";
 
   // ── Data ───────────────────────────────────────────────────────────────────
@@ -45,6 +51,7 @@ export default function DoctorsNearby() {
   const [selected, setSelected] = useState(null);
   const [showMap, setShowMap] = useState(true);
   const [drawer, setDrawer] = useState(null);
+  const [showAddPlace, setShowAddPlace] = useState(false);
 
   const cardRefs = useRef({});
 
@@ -61,13 +68,7 @@ export default function DoctorsNearby() {
     let result = [...places];
     if (filter !== "all") result = result.filter((p) => p.category === filter);
     if (query.trim()) {
-      const q = query.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.nameEn.toLowerCase().includes(q) ||
-          p.address.toLowerCase().includes(q),
-      );
+      result = result.filter((p) => placeMatchesSearch(p, query));
     }
     setFiltered(result);
   }, [places, filter, query]);
@@ -171,19 +172,17 @@ export default function DoctorsNearby() {
 
       {/* ── Controls ──────────────────────────────────────────────────────── */}
       <div className="container mx-auto px-4 py-5">
-        <div className="flex flex-row gap-4">
+        <div className="flex flex-row flex-wrap gap-3 items-stretch">
           {/* Search */}
-          <div className="relative flex items-center flex-1">
+          <div className="relative flex items-center flex-1 min-w-[200px]">
+            <FaSearch
+              className={`absolute text-gray-400 pointer-events-none z-10 ${isAr ? "right-4" : "left-4"}`}
+            />
             <Input
-            
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={
-                isAr
-                  ? "ابحث عن طبيب أو عيادة..."
-                  : "Search for a doctor or clinic..."
-              }
+              placeholder={t("places.search_hint")}
               className={`w-full p-3 h-12 rounded-2xl border text-sm font-semibold outline-none transition-all focus:border-[#0076f7] focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 ${isAr ? "pr-12 pl-4" : "pl-12 pr-4"}`}
               style={{
                 background: "var(--card-bg,white)",
@@ -193,6 +192,7 @@ export default function DoctorsNearby() {
             />
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery("")}
                 className={`absolute top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 ${isAr ? "left-4" : "right-4"}`}
               >
@@ -201,10 +201,25 @@ export default function DoctorsNearby() {
             )}
           </div>
 
+          <button
+            type="button"
+            onClick={() => setShowAddPlace(true)}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm border transition-all shrink-0"
+            style={{
+              background: "var(--card-bg)",
+              color: "var(--text-main)",
+              borderColor: "var(--border-color)",
+            }}
+          >
+            <FaPlus />
+            {t("places.add_facility")}
+          </button>
+
           {/* Toggle map */}
           <button
+            type="button"
             onClick={() => setShowMap((v) => !v)}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm border transition-all"
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm border transition-all shrink-0"
             style={{
               background: showMap ? "#0076f7" : "var(--card-bg)",
               color: showMap ? "white" : "var(--text-main)",
@@ -387,6 +402,12 @@ export default function DoctorsNearby() {
           catEmoji={catEmoji}
         />
       )}
+
+      <AddPlaceModal
+        isOpen={showAddPlace}
+        onClose={() => setShowAddPlace(false)}
+        lng={lng}
+      />
     </div>
   );
 }

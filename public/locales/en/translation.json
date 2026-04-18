@@ -84,5 +84,25 @@
     "repredict": "RePredict",
     "predict_button": "Predict",
     "body_parts": "Body Parts"
+  },
+  "places": {
+    "add_facility": "Add facility",
+    "add_title": "Add healthcare facility",
+    "sign_in_to_add": "Sign in to add a hospital, clinic, doctor, or pharmacy to the map.",
+    "field_name": "Name (Arabic or primary)",
+    "field_name_en": "English name",
+    "field_category": "Type",
+    "field_address": "Address",
+    "field_lat": "Latitude",
+    "field_lon": "Longitude",
+    "field_phone": "Phone",
+    "field_specialty": "Specialty / notes",
+    "coords_hint": "Use coordinates inside Minia Governorate (defaults to map center).",
+    "add_submit": "Save to map",
+    "add_error": "Could not save. Try again.",
+    "search_hint": "Search name, English name, address, specialty, phone…",
+    "err_name": "Enter a name.",
+    "err_coords": "Enter valid latitude and longitude.",
+    "err_bounds": "Coordinates must be within Minia Governorate bounds."
   }
 }
