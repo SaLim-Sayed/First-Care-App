@@ -213,14 +213,24 @@ export function PlaceDrawer({ place, isAr, onClose, catLabel, catColor, catBarGr
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t shrink-0" style={{ borderColor: "var(--border-color)" }}>
+        <div className="px-5 py-4 border-t shrink-0 flex gap-2" style={{ borderColor: "var(--border-color)" }}>
+          {place.phone ? (
+            <a
+              href={`https://wa.me/${place.phone.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-black no-underline hover:shadow-lg transition-all text-sm"
+            >
+              💬 {isAr ? "واتساب" : "WhatsApp"}
+            </a>
+          ) : null}
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-[#0076f7] text-white font-black no-underline hover:bg-blue-700 transition-all text-sm"
+            className={`flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#0076f7] text-white font-black no-underline hover:bg-blue-700 transition-all text-sm ${place.phone ? 'flex-1' : 'w-full'}`}
           >
-            <FaMapMarkerAlt /> {isAr ? "احصل على الاتجاهات في الخريطة" : "Get Directions on Google Maps"}
+            <FaMapMarkerAlt /> {isAr ? "الاتجاهات" : "Directions"}
           </a>
         </div>
       </div>

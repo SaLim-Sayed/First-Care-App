@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FirstAidChatInput } from '@/components/FirstAid/FirstAidChatInput';
@@ -25,13 +25,28 @@ export default function FirstAid() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  /* When user taps a suggestion chip, pre-fill and auto-send */
+  const handleSuggest = useCallback(
+    (text) => {
+      setValue(text);
+      // Tiny delay so setValue settles before send reads it
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: 'user', text }]);
+      }, 0);
+    },
+    [setValue, setMessages],
+  );
+
   return (
     <div
-      className="flex flex-col min-h-screen bg-[var(--bg-color)]   pt-20 transition-colors duration-300"
+      className="first-aid-page"
       dir={isAr ? 'rtl' : 'ltr'}
     >
-      <div className="flex-grow flex flex-col max-w-2xl mx-auto w-full bg-[var(--card-bg)] shadow-2xl relative overflow-hidden sm:rounded-b-[2.5rem] border-x border-b border-[var(--border-color)]">
-        <FirstAidHeader title={t('firstaid.bot_role')} statusLabel={t('firstaid.status_online')} />
+      <div className="first-aid-card">
+        <FirstAidHeader
+          title={t('firstaid.bot_role')}
+          statusLabel={t('firstaid.status_online')}
+        />
 
         <FirstAidMessageList
           messages={messages}
@@ -39,6 +54,8 @@ export default function FirstAid() {
           historyLoading={historyLoading}
           loadingLabel={t('firstaid.loading_history')}
           chatEndRef={chatEndRef}
+          onSuggest={handleSuggest}
+          isAr={isAr}
         />
 
         <FirstAidChatInput
@@ -47,7 +64,7 @@ export default function FirstAid() {
           onSend={sendMessage}
           isLoading={isLoading}
           historyLoading={historyLoading}
-          placeholder={isAr ? 'اكتب رسالتك...' : 'Enter your message...'}
+          placeholder={isAr ? 'اكتب رسالتك...' : 'Type your message…'}
           isAr={isAr}
         />
       </div>

@@ -163,6 +163,13 @@ export default function ProfilePage() {
           </button>
         </form>
 
+        <Link
+          href={`/${lng}/profile/history`}
+          className="mt-6 w-full flex items-center justify-center py-3.5 rounded-2xl font-bold border-2 border-[#0076f7] text-[#0076f7] hover:bg-[#0076f7] hover:text-white transition-all no-underline shadow-sm"
+        >
+          {isAr ? 'عرض سجل النشاطات' : 'View Activity History'}
+        </Link>
+
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: `/${lng}` })}

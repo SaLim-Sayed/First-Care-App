@@ -6,12 +6,32 @@ import { useCallback, useState } from 'react';
 import { PREDICT_API_BASE } from '@/lib/prediction/constants';
 import { fetchGeminiDiagnosis } from '@/lib/prediction/geminiDiagnosis';
 import { normalizePredictionPayload } from '@/lib/prediction/normalizePayload';
+import { getOrCreateAnonymousId } from '@/lib/firstAid/session';
 
 const REQUIRED_VECTOR_LENGTH = 350;
 
 export function usePredictionApi({ posts, isAr, onOpen }) {
   const [prediction, setPrediction] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const savePredictionHistory = async (diagnosis) => {
+    try {
+      const selectedSymptoms = Object.entries(posts)
+        .filter(([, value]) => value === 1)
+        .map(([key]) => key);
+      
+      if (selectedSymptoms.length === 0 || !diagnosis) return;
+      
+      const anonId = getOrCreateAnonymousId();
+      await axios.post(
+        '/api/prediction/history',
+        { symptoms: selectedSymptoms, diagnosis, anonymousId: anonId },
+        { headers: { 'x-first-aid-session': anonId } }
+      );
+    } catch (err) {
+      console.error('Failed to save prediction history', err);
+    }
+  };
 
   const fetchGeminiPrediction = useCallback(
     async (selectedSymptoms) => {
@@ -34,6 +54,7 @@ export function usePredictionApi({ posts, isAr, onOpen }) {
         }
 
         setPrediction(result.text);
+        savePredictionHistory(result.text);
       } catch (error) {
         console.error('Gemini fallback failed:', error);
         setPrediction(
@@ -46,7 +67,7 @@ export function usePredictionApi({ posts, isAr, onOpen }) {
         onOpen();
       }
     },
-    [isAr, onOpen],
+    [isAr, onOpen, posts],
   );
 
   const predictionHandle = useCallback(() => {
@@ -66,7 +87,9 @@ export function usePredictionApi({ posts, isAr, onOpen }) {
     axios
       .get(url, { timeout: 90_000 })
       .then((response) => {
-        setPrediction(normalizePredictionPayload(response.data));
+        const text = normalizePredictionPayload(response.data);
+        setPrediction(text);
+        savePredictionHistory(text);
         setIsLoading(false);
         onOpen();
       })

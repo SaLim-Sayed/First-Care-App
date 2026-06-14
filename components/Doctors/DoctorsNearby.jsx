@@ -513,28 +513,41 @@ function PlaceCard({ place, isAr, isSelected, onSelect, cardRef }) {
 
         {/* Actions */}
         <div className="flex gap-2">
-          <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-[#0076f7] text-white text-xs font-black no-underline hover:bg-blue-700 transition-all"
-          >
-            <FaMapMarkerAlt /> {isAr ? "الاتجاهات" : "Directions"}
-          </a>
+          {place.phone ? (
+            <a
+              href={`https://wa.me/${place.phone.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white text-xs font-black no-underline hover:shadow-lg transition-all"
+            >
+              💬 {isAr ? 'واتساب' : 'WhatsApp'}
+            </a>
+          ) : (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-[#0076f7] text-white text-xs font-black no-underline hover:bg-blue-700 transition-all"
+            >
+              <FaMapMarkerAlt /> {isAr ? 'الاتجاهات' : 'Directions'}
+            </a>
+          )}
+          
           <button
             onClick={(e) => {
               e.stopPropagation();
               onSelect(place);
             }}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all shrink-0"
             style={{
               borderColor: isSelected ? "#0076f7" : "var(--border-color)",
               color: isSelected ? "#0076f7" : "var(--text-muted)",
               background: "transparent",
             }}
           >
-            <FaMapMarkerAlt /> {isAr ? "على الخريطة" : "On Map"}
+            <FaMapMarkerAlt /> {isAr ? "على الخريطة" : "Map"}
           </button>
         </div>
       </div>
